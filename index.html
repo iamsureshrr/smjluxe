@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeevan fansy jewellery Stall</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+   <header>
+    <div class="brand-block">
+        <img src="smj-logo.png" alt="SMJ Luxe Logo" class="brand-logo">
+        <h1 id="store-title">SMJ Luxe</h1>
+    </div>
+    <div class="header-actions">
+        <button id="add-prod-btn" class="btn btn-primary" onclick="openAdminPopup()" style="display:none;">+ Add Product</button>
+    </div>
+</header>
+
+
+
+    <div class="container">
+        <div class="store-controls">
+            <input type="text" id="search-box" class="search-input" placeholder="Search products..." oninput="filterStore()">
+            <div class="category-scroll">
+    <button id="chip-All" class="chip" onclick="selectCategory('All', this)">All Items</button>
+    <button id="chip-InStock" class="chip" onclick="selectCategory('In Stock', this)">Available</button>
+    <button id="chip-OutOfStock" class="chip" onclick="selectCategory('Out of Stock', this)">Out of Stock</button>
+    <button id="chip-Sold" class="chip" onclick="selectCategory('Sold', this)">Sold</button>
+    <button id="chip-ComingSoon" class="chip" onclick="selectCategory('Coming Soon', this)">Coming Soon</button>
+    <button id="sort-toggle-btn" class="chip" onclick="togglePriceSort()" style="background-color: #cbd5e1;">Importing...</button> 
+</div>
+        </div>
+
+        <div id="loading-indicator" class="loading">Loading store collections...</div>
+        <div class="products-grid" id="products-container"></div>
+    </div>
+
+    <div id="cart-sticky-bar" class="cart-bar" onclick="openCartDrawer()">
+        <div class="cart-bar-info">
+            <span id="cart-count" class="cart-count-badge">0</span>
+            <span style="font-weight: 600; font-size: 0.95rem;">Items in Bag</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span id="cart-total-price" style="font-weight: bold; font-size: 1.1rem;">₹0</span>
+            <span class="btn btn-success" style="padding: 0.4rem 0.6rem; font-size: 0.8rem;">View Bag →</span>
+        </div>
+    </div>
+
+    <div id="cartDrawer" class="drawer" onclick="closeCartDrawer(event)">
+        <div class="drawer-content" onclick="event.stopPropagation()">
+            <div class="drawer-header">
+                <h3>Shopping Bag</h3>
+                <button class="btn btn-secondary" style="padding:0.3rem 0.6rem;" onclick="closeCartDrawer(null)">✕</button>
+            </div>
+            <div id="cart-items-container" class="cart-items-list"></div>
+            <div style="border-top: 2px solid #f1f5f9; padding-top: 1rem;">
+                <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.1rem; margin-bottom:1rem;">
+                    <span>Grand Total:</span>
+                    <span id="drawer-total-price">₹0</span>
+                </div>
+                <button class="btn btn-success" style="width:100%; padding:0.8rem; font-size:1rem;" onclick="checkoutToWhatsApp()">Order via WhatsApp</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="detailsModal" class="drawer" onclick="closeDetailsModal(event)">
+        <div class="drawer-content" onclick="event.stopPropagation()">
+            <div class="drawer-header">
+                <h3 id="details-code" style="color: #94a3b8; font-size: 0.8rem; text-transform: uppercase;"></h3>
+                <button class="btn btn-secondary" style="padding:0.3rem 0.6rem;" onclick="closeDetailsModal(null)">✕</button>
+            </div>
+            <div style="overflow-y: auto; flex-grow: 1; padding-bottom: 1rem;">
+                <div class="details-gallery">
+                    <img id="details-main-img" src="" alt="Product view" style="width: 100%; height: auto; max-height: 400px; object-fit: contain; border-radius: 12px; background-color: #f1f5f9;">
+                    <div id="details-thumbs" class="details-thumbs-row"></div>
+                </div>
+                <h2 id="details-title" style="font-size: 1.2rem; margin: 1rem 0 0.5rem 0;"></h2>
+                <div id="details-stock-status" style="margin-bottom: 0.5rem;"></div>
+                <div id="details-price-block" style="margin-bottom: 1rem;"></div>
+                <div style="font-weight: bold; font-size: 0.9rem; margin-bottom: 0.3rem; color: #475569;">Product Description:</div>
+                <p id="details-desc" style="font-size: 0.9rem; color: #64748b; line-height: 1.5; margin: 0; background: #f8fafc; padding: 0.8rem; border-radius: 8px;"></p>
+            </div>
+            <div id="details-action-container" style="border-top: 1px solid #f1f5f9; padding-top: 1rem;"></div>
+        </div>
+    </div>
+
+    <div id="adminModal" class="modal">
+        <div class="modal-content-panel" style="position: relative;">
+            <button type="button" onclick="closeAdminPopup()" style="position: absolute; top: 15px; right: 15px; border: none; background: #e2e8f0; border-radius: 50%; width: 28px; height: 28px; font-weight: bold; cursor: pointer; color: #475569;">✕</button>
+            
+            <h2 id="form-title" style="margin-top:0; font-size:1.1rem; padding-right: 30px;">Add Product</h2>
+           <form id="product-form" onsubmit="saveProduct(event)">
+    <input type="hidden" id="product-id">
+    
+    <div class="form-group">
+        <label>Product Code</label>
+        <input type="text" id="prod-code" placeholder="e.g., PRD-5218">
+    </div>
+    
+    <div class="form-group">
+        <label>Choose Product Images (Can select multiple)</label>
+        <input type="file" id="prod-file" accept="image/*" multiple onchange="handleImageUpload(event)" style="margin-top:5px; border:none; padding:0; font-size:0.8rem; cursor: pointer;">
+        <div class="preview-box-label">Uploaded Image Previews (Click ✕ to delete):</div>
+        <div id="admin-preview-wrapper" style="margin-top: 8px; display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px;"></div>
+    </div>
+
+    <div class="form-group">
+        <label>Product Name</label>
+        <input type="text" id="prod-name" required>
+    </div>
+    
+    <div style="display: flex; gap: 0.5rem;">
+        <div class="form-group" style="flex: 1;"><label>Original Price (MRP)</label><input type="text" id="prod-mrp" placeholder="₹500" oninput="formatCurrencyInput(this)"></div>
+        <div class="form-group" style="flex: 1;"><label>Sale Price (Offer)</label><input type="text" id="prod-price" placeholder="₹250" required oninput="formatCurrencyInput(this)"></div>
+    </div>
+
+    <div class="form-group"><label>Total Stock Available</label><input type="number" id="prod-stock" min="0" value="1"></div>
+    <div class="form-group"><label>Product Description</label><input type="text" id="prod-desc" placeholder="Enter materials, size details..."></div>
+    
+    <div class="form-group">
+        <label>Status</label>
+        <select id="prod-status">
+            <option value="In Stock">In Stock</option>
+            <option value="Out of Stock">Out of Stock</option>
+            <option value="Sold">Sold</option>
+            <option value="Coming Soon">Coming Soon</option>
+        </select>
+    </div>
+    <div style="display:flex; gap:0.5rem; margin-top:1.2rem;">
+        <button type="submit" class="btn btn-primary" style="flex:1;">Save Item</button>
+        <button type="button" class="btn btn-secondary" onclick="closeAdminPopup()" style="flex:1;">Cancel</button>
+    </div>
+</form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
